@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>NOTICE</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="tgt"></div>
+<script type="text/x-template" id="tmpl-notice">
+    <div class="notice">
+        <div class="notice-title">
+            <h2 v-html="src.title"></h2>
+            <div class="notice-lang_select">
+                <select v-model="current_lang">
+                    <option v-for="lang in lang_list" :value="lang.value">{{lang.label}}</option>
+                </select>
+            </div>
+        </div>
+        <div class="notice-main" v-html="src.content">
+        </div>
+    </div>
+</script>
+<script src="js/superagent.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+<script>
+    var request = window.superagent;
+    (function(){
+        Vue.component('notice', {
+            props:{
+                init_lang:{
+                    type:String,
+                    required:true
+                },
+                title:{
+                    type:String
+                }
+            },
+            data:function(){
+                return {
+                    current_lang:'',
+                    title_data:[
+                        {
+                            title: 'hoge',
+                            lang_list: [
+                                {value:"ja",label:"日本語"},
+                                {value:"en-us",label:"English(US)"},
+                                {value:"en-gb",label:"English(UK)"},
+                                {value:"fr",label:"Français"},
+                                {value:"de",label:"Deutsch"},
+                                {value:"it",label:"Italiano"},
+                                {value:"es",label:"Español(ES)"},
+                                {value:"es-mx",label:"Español(MX)"},
+                                {value:"pt",label:"Português(PT)"},
+                                {value:"pt-br",label:"Português(BR)"},
+                                {value:"nl",label:"Nederlands"},
+                                {value:"el",label:"Ελληνικά"},
+                                {value:"ru",label:"Русский язык"},
+                                {value:"sv",label:"Svenska"},
+                                {value:"tr",label:"Türkçe"},
+                                {value:"ar",label:"العربية"},
+                                {value:"ko",label:"한국어"},
+                                {value:"zh-cn",label:"简体中文"},
+                                {value:"zh-tw",label:"繁體中文"}
+                            ]
+                        },
+                        {
+                            title: 'fuga',
+                            lang_list: [
+                                {value:"ja",label:"日本語"},
+                                {value:"en-us",label:"English(US)"},
+                                {value:"en-gb",label:"English(UK)"},
+                                {value:"fr",label:"Français"},
+                                {value:"de",label:"Deutsch"},
+                                {value:"it",label:"Italiano"},
+                                {value:"es",label:"Español(ES)"},
+                                {value:"pt-br",label:"Português(BR)"},
+                                {value:"el",label:"Ελληνικά"},
+                                {value:"ru",label:"Русский язык"},
+                                {value:"tr",label:"Türkçe"},
+                                {value:"ko",label:"한국어"},
+                                {value:"zh-cn",label:"简体中文"},
+                                {value:"zh-tw",label:"繁體中文"},
+                                {value:"id",label:"Indonesian"}
+                            ]
+                        }
+                    ],
+                    src_data:{}
+                };
+            },
+            computed:{
+                src:function(){
+                    return this.src_data[this.current_title][this.current_lang];
+                },
+                lang_list:function(){
+                    return this.title_data.filter(function(data){
+                        return data.title === this.title;
+                    },this)[0].lang_list || [];
+                },
+                current_title:function(){
+                    return this.title_data.filter(function(data){
+                        return data.title === this.title;
+                    },this)[0].title || this.title_data[0].title;
+                }
+            },
+            created:function(){
+                let that = this;
+                // 初期言語をセット
+                this.current_lang = this.getCurrentLang(this.init_lang);
+                // src の型をセット
+                this.title_data.forEach(function(data){
+                    this.$set(this.src_data,data.title,{});
+                    data.lang_list.forEach(function(lang){
+                        this.$set(this.src_data[data.title], lang.value,'');
+                    },this);
+                },this);
+                // 初期値のソースをとりにいく
+                this.getSrc();
+            },
+            template:'#tmpl-notice',
+            methods:{
+                /* en は地域情報をつける必要がある */
+                getCurrentLang:function(lang){
+                    return lang === 'en' ? "en-gb" : lang;
+                },
+                getSrc:function(){
+                    var that = this;
+                    if(!this.src_data[this.current_title][this.current_lang]){
+                        request
+                            .get('htmlsrc/'+this.current_title+'_'+this.current_lang+'.txt')
+                            .set('Content-Type', 'text/plain;charset=utf-8')
+                            .end(function(err, res){
+                                that.src_data[that.current_title][that.current_lang] = that.getEmbetSrc(res.text, that.current_title);
+                            });
+                    }
+                },
+                /* 生HTMLソースから埋め込むタイトルと内容部分を抜き出す */
+                getEmbetSrc: function(raw_html_src, title){
+                    let ret_obj = {
+                        title:'',
+                        content:''
+                    };
+                    let inner_body = raw_html_src.match(/<body>(.+)<\/body>/s)[1];
+                    const tmp_el = document.createElement('div');
+                    tmp_el.innerHTML = inner_body;
+                    if(title==='hoge'){
+                        ret_obj = {
+                            title:tmp_el.getElementsByClassName('content-title')[0].innerHTML,
+                            content:tmp_el.getElementsByClassName('content-main')[0].innerHTML
+                        };
+                    }else if(title==='fuga'){
+                        let title_el = tmp_el.getElementsByTagName('section')[0].getElementsByTagName('h2');
+                        ret_obj.title = title_el[0].innerHTML;
+                        title_el[0].remove();
+                        ret_obj.content = tmp_el.getElementsByTagName('section')[0].innerHTML;
+                    }
+
+                    return ret_obj;
+                }
+            },
+            watch:{
+                current_lang:function(){
+                    this.getSrc();
+                },
+                current_title:function(){
+                    this.getSrc();
+                }
+            }
+        });
+        new Vue({
+            el:'#tgt',
+            data:{
+                lang:'en',
+                title:'fuga'
+            },
+            template:'<notice :init_lang="lang" :title="title"></notice>'
+        });
+    })();
+</script>
+</body>
+</html>
