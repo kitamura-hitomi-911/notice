@@ -3,21 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <title>NOTICE</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 <div id="tgt"></div>
 <script type="text/x-template" id="tmpl-notice">
-    <div class="notice">
-        <div class="notice-title">
-            <h2 v-html="src.title"></h2>
-            <div class="notice-lang_select">
-                <select v-model="current_lang">
-                    <option v-for="lang in lang_list" :value="lang.value">{{lang.label}}</option>
-                </select>
+    <div class="l-notice">
+        <div :class="'notice notice-'+current_lang">
+            <div class="notice-head">
+                <h2 v-html="src.title" class="notice-title"></h2>
+                <div class="notice-lang_select">
+                    <select v-model="current_lang">
+                        <option v-for="lang in lang_list" :value="lang.value">{{lang.label}}</option>
+                    </select>
+                </div>
             </div>
-        </div>
-        <div class="notice-main" v-html="src.content">
+            <div class="notice-main" v-html="src.content"></div>
         </div>
     </div>
 </script>
@@ -75,7 +77,6 @@
                                 {value:"it",label:"Italiano"},
                                 {value:"es",label:"Español(ES)"},
                                 {value:"pt-br",label:"Português(BR)"},
-                                {value:"el",label:"Ελληνικά"},
                                 {value:"ru",label:"Русский язык"},
                                 {value:"tr",label:"Türkçe"},
                                 {value:"ko",label:"한국어"},
@@ -130,12 +131,12 @@
                             .get('htmlsrc/'+this.current_title+'_'+this.current_lang+'.txt')
                             .set('Content-Type', 'text/plain;charset=utf-8')
                             .end(function(err, res){
-                                that.src_data[that.current_title][that.current_lang] = that.getEmbetSrc(res.text, that.current_title);
+                                that.src_data[that.current_title][that.current_lang] = that.getEmbetSrc(res.text, that.current_title,{current_lang:that.current_lang});
                             });
                     }
                 },
                 /* 生HTMLソースから埋め込むタイトルと内容部分を抜き出す */
-                getEmbetSrc: function(raw_html_src, title){
+                getEmbetSrc: function(raw_html_src, title,op){
                     let ret_obj = {
                         title:'',
                         content:''
@@ -149,10 +150,27 @@
                             content:tmp_el.getElementsByClassName('content-main')[0].innerHTML
                         };
                     }else if(title==='fuga'){
+                        /* titleだけ抜き出す */
                         let title_el = tmp_el.getElementsByTagName('section')[0].getElementsByTagName('h2');
                         ret_obj.title = title_el[0].innerHTML;
+
+                        /* 内容部分、title部分をremove、document.writeのところ上書き、リンクURL調整 */
+                        let page_url = 'https://hogehoge.com/'+op.current_lang+'/';
+                        let content_el = tmp_el.getElementsByTagName('section')[0];
+                        let own_url_el = content_el.getElementsByClassName('url');
+                        let a_el = content_el.getElementsByTagName('a');
+                        console.log(a_el);
+                        Array.prototype.forEach.call(a_el, function (a, index) {
+                            a.href = page_url + a.getAttribute("href");
+                            console.log(a);
+                        });
+
+
+                        if(own_url_el.length){
+                            own_url_el[0].innerHTML = page_url;
+                        }
                         title_el[0].remove();
-                        ret_obj.content = tmp_el.getElementsByTagName('section')[0].innerHTML;
+                        ret_obj.content = content_el.innerHTML;
                     }
 
                     return ret_obj;
@@ -170,8 +188,8 @@
         new Vue({
             el:'#tgt',
             data:{
-                lang:'en',
-                title:'fuga'
+                lang:'ar',
+                title:'hoge'
             },
             template:'<notice :init_lang="lang" :title="title"></notice>'
         });
