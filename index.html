@@ -19,7 +19,11 @@
                     </select>
                 </div>
             </div>
-            <div class="notice-main" v-html="src.content"></div>
+            <div class="notice-main">
+                <div v-html="src.content" v-if="src.content"></div>
+                <div v-else-if="src.disabled">取得できませんでした</div>
+                <div class="loading" v-else>ローディングパーツいれる</div>
+            </div>
         </div>
     </div>
 </script>
@@ -106,73 +110,91 @@
             },
             created:function(){
                 let that = this;
-                // 初期言語をセット
-                this.current_lang = this.getCurrentLang(this.init_lang);
                 // src の型をセット
                 this.title_data.forEach(function(data){
                     this.$set(this.src_data,data.title,{});
                     data.lang_list.forEach(function(lang){
-                        this.$set(this.src_data[data.title], lang.value,'');
+                        this.$set(this.src_data[data.title], lang.value,{});
                     },this);
                 },this);
-                // 初期値のソースをとりにいく
-                this.getSrc();
+                // 初期言語をセット
+                this.current_lang = this.getCurrentLang();
             },
             template:'#tmpl-notice',
             methods:{
-                /* en は地域情報をつける必要がある */
-                getCurrentLang:function(lang){
-                    return lang === 'en' ? "en-gb" : lang;
+                /* 存在しない言語の場合は、en-gb へ */
+                getCurrentLang:function(){
+                    let lang = this.init_lang || this.current_lang;
+                    return this.src_data[this.current_title][lang] ? lang : 'en-gb';
                 },
                 getSrc:function(){
-                    var that = this;
-                    if(!this.src_data[this.current_title][this.current_lang]){
+                    let that = this;
+                    if(Object.keys(this.src_data[this.current_title][this.current_lang]).length === 0 ){
                         request
                             .get('htmlsrc/'+this.current_title+'_'+this.current_lang+'.txt')
                             .set('Content-Type', 'text/plain;charset=utf-8')
                             .end(function(err, res){
-                                that.src_data[that.current_title][that.current_lang] = that.getEmbetSrc(res.text, that.current_title,{current_lang:that.current_lang});
+                                console.log(err);
+                                that.src_data[that.current_title][that.current_lang] = that.getEmbetSrc(err ? '' : res.text, that.current_title,{current_lang:that.current_lang});
                             });
                     }
                 },
                 /* 生HTMLソースから埋め込むタイトルと内容部分を抜き出す */
                 getEmbetSrc: function(raw_html_src, title,op){
                     let ret_obj = {
+                        disabled:false,
                         title:'',
                         content:''
                     };
-                    let inner_body = raw_html_src.match(/<body>(.+)<\/body>/s)[1];
-                    const tmp_el = document.createElement('div');
-                    tmp_el.innerHTML = inner_body;
-                    if(title==='hoge'){
-                        ret_obj = {
-                            title:tmp_el.getElementsByClassName('content-title')[0].innerHTML,
-                            content:tmp_el.getElementsByClassName('content-main')[0].innerHTML
-                        };
-                    }else if(title==='fuga'){
-                        /* titleだけ抜き出す */
-                        let title_el = tmp_el.getElementsByTagName('section')[0].getElementsByTagName('h2');
-                        ret_obj.title = title_el[0].innerHTML;
-
-                        /* 内容部分、title部分をremove、document.writeのところ上書き、リンクURL調整 */
-                        let page_url = 'https://hogehoge.com/'+op.current_lang+'/';
-                        let content_el = tmp_el.getElementsByTagName('section')[0];
-                        let own_url_el = content_el.getElementsByClassName('url');
-                        let a_el = content_el.getElementsByTagName('a');
-                        console.log(a_el);
-                        Array.prototype.forEach.call(a_el, function (a, index) {
-                            a.href = page_url + a.getAttribute("href");
-                            console.log(a);
-                        });
-
-
-                        if(own_url_el.length){
-                            own_url_el[0].innerHTML = page_url;
-                        }
-                        title_el[0].remove();
-                        ret_obj.content = content_el.innerHTML;
+                    let inner_body = raw_html_src.match(/<body>(.+)<\/body>/s);
+                    if(!inner_body || inner_body.length === 1){
+                        // ソースがない、もしくは該当部分がとれない
+                        ret_obj.disabled = true;
+                        return ret_obj;
                     }
+                    let title_els,content_els,title_el,content_el,title_src,content_src;
+                    let tmp_el = document.createElement('div');
+                    tmp_el.innerHTML = inner_body[1];
+                    if(title==='hoge'){
+                        /* title 取得 */
+                        title_els = tmp_el.getElementsByClassName('content-title');
+                        title_el = title_els.length ? title_els[0] : null;
+                        title_src = title_el ? title_el.innerHTML : '';
+                        /* 内容 取得 */
+                        content_els = tmp_el.getElementsByClassName('content-main');
+                        content_el = content_els.length ? content_els[0] : null;
+                        content_src = content_el ? content_el.innerHTML : '';
+                    }else if(title==='fuga'){
+                        /* title 取得 */
+                        title_els = tmp_el.getElementsByTagName('section')[0].getElementsByTagName('h2');
+                        title_el = title_els.length ? title_els[0] : null;
+                        title_src = title_el ? title_el.innerHTML : '';
 
+                        /* 内容 取得して、title_el をremove、document.writeのところ上書き、リンクURL調整 */
+                        content_els = tmp_el.getElementsByTagName('section');
+                        content_el = content_els.length ? content_els[0] : null;
+                        if(content_el && title_el){
+                            let page_url = 'https://hogehoge.com/'+title+'/'+op.current_lang+'/';
+                            let own_url_el = content_el.getElementsByClassName('url');
+                            let a_el = content_el.getElementsByTagName('a');
+                            title_el.remove();
+                            if(own_url_el.length){
+                                own_url_el[0].innerHTML = page_url;
+                            }
+                            Array.prototype.forEach.call(a_el, function (a, index) {
+                                a.href = page_url + a.getAttribute("href");
+                                console.log(a);
+                            });
+                            content_src = content_el.innerHTML;
+                        }
+                    }
+                    if(title_src && content_src){
+                        ret_obj.title = title_el.innerHTML;
+                        ret_obj.content = content_el.innerHTML;
+                    }else{
+                        // 該当部分がとれない
+                        ret_obj.disabled = true;
+                    }
                     return ret_obj;
                 }
             },
@@ -181,6 +203,7 @@
                     this.getSrc();
                 },
                 current_title:function(){
+                    this.current_lang = this.getCurrentLang(this.init_lang);
                     this.getSrc();
                 }
             }
@@ -188,7 +211,7 @@
         new Vue({
             el:'#tgt',
             data:{
-                lang:'ar',
+                lang:'en',
                 title:'hoge'
             },
             template:'<notice :init_lang="lang" :title="title"></notice>'
