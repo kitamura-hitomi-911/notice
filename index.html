@@ -8,18 +8,18 @@
 </head>
 <body>
 <div id="tgt"></div>
-<script type="text/x-template" id="tmpl-notice">
-    <div class="l-notice">
-        <div :class="'notice notice-'+current_lang">
-            <div class="notice-head">
-                <h2 v-html="current_notice_data.title" class="notice-title"></h2>
-                <div class="notice-lang_select">
+<script type="text/x-template" id="tmpl-p_notice">
+    <div class="l-p_notice">
+        <div :class="'p_notice p_notice-'+current_lang">
+            <div class="p_notice-head">
+                <h2 v-html="current_notice_data.title" class="p_notice-title"></h2>
+                <div class="p_notice-lang_select">
                     <select v-model="current_lang">
                         <option v-for="lang in current_lang_list" :value="lang.value">{{lang.label}}</option>
                     </select>
                 </div>
             </div>
-            <div class="notice-main">
+            <div class="p_notice-main">
                 <div v-html="current_notice_data.content" v-if="current_notice_data.content"></div>
                 <div v-else-if="current_notice_data.disabled">取得できませんでした</div>
                 <div class="loading" v-else>ローディングパーツいれる</div>
@@ -122,7 +122,7 @@
 
                 console.log(this.current_notice_data);
             },
-            template:'#tmpl-notice',
+            template:'#tmpl-p_notice',
             methods:{
                 /* 存在しない言語の場合は、en-gb へ */
                 getCurrentLang:function(){

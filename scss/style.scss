@@ -1,23 +1,23 @@
-.l-notice{
+.l-p_notice{
 	max-width:800px;
 	margin: 0 auto;
 	border:1px solid #000;
 }
-.notice{
+.p_notice{
 	padding:10px;
-	.notice-head{
+	.p_notice-head{
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
-		.notice-title{
+		.p_notice-title{
 			font-size:16px;
 			line-height:2em;
 		}
-		.notice-lang_select{
+		.p_notice-lang_select{
 
 		}
 	}
-	.notice-main{
+	.p_notice-main{
 		height:400px;
 		overflow-y: scroll;
 		padding:10px;
@@ -38,8 +38,8 @@
 	}
 }
 
-.notice.notice-ar{
-	.notice-main {
+.p_notice.p_notice-ar{
+	.p_notice-main {
 		direction: rtl;
 	}
 }
