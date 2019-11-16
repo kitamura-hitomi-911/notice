@@ -99,13 +99,14 @@
                 },
                 current_lang_list:function(){
                     return this.title_data.filter(function(data){
-                        return data.title === this.title;
+                        return data.title === this.current_title;
                     },this)[0].lang_list || [];
                 },
                 current_title:function(){
-                    return this.title_data.filter(function(data){
+                    let current_title_data = this.title_data.filter(function(data){
                         return data.title === this.title;
-                    },this)[0].title || this.title_data[0].title;
+                    },this);
+                    return current_title_data.length ? current_title_data[0].title : this.title_data[0].title;
                 }
             },
             created:function(){
