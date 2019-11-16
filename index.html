@@ -12,16 +12,16 @@
     <div class="l-notice">
         <div :class="'notice notice-'+current_lang">
             <div class="notice-head">
-                <h2 v-html="src.title" class="notice-title"></h2>
+                <h2 v-html="current_notice_data.title" class="notice-title"></h2>
                 <div class="notice-lang_select">
                     <select v-model="current_lang">
-                        <option v-for="lang in lang_list" :value="lang.value">{{lang.label}}</option>
+                        <option v-for="lang in current_lang_list" :value="lang.value">{{lang.label}}</option>
                     </select>
                 </div>
             </div>
             <div class="notice-main">
-                <div v-html="src.content" v-if="src.content"></div>
-                <div v-else-if="src.disabled">取得できませんでした</div>
+                <div v-html="current_notice_data.content" v-if="current_notice_data.content"></div>
+                <div v-else-if="current_notice_data.disabled">取得できませんでした</div>
                 <div class="loading" v-else>ローディングパーツいれる</div>
             </div>
         </div>
@@ -90,14 +90,14 @@
                             ]
                         }
                     ],
-                    src_data:{}
+                    notice_data:{}
                 };
             },
             computed:{
-                src:function(){
-                    return this.src_data[this.current_title][this.current_lang];
+                current_notice_data:function(){
+                    return this.notice_data[this.current_title][this.current_lang];
                 },
-                lang_list:function(){
+                current_lang_list:function(){
                     return this.title_data.filter(function(data){
                         return data.title === this.title;
                     },this)[0].lang_list || [];
@@ -112,30 +112,33 @@
                 let that = this;
                 // src の型をセット
                 this.title_data.forEach(function(data){
-                    this.$set(this.src_data,data.title,{});
+                    this.$set(this.notice_data,data.title,{});
                     data.lang_list.forEach(function(lang){
-                        this.$set(this.src_data[data.title], lang.value,{});
+                        this.$set(this.notice_data[data.title], lang.value,{});
                     },this);
                 },this);
                 // 初期言語をセット
                 this.current_lang = this.getCurrentLang();
+
+                console.log(this.current_notice_data);
             },
             template:'#tmpl-notice',
             methods:{
                 /* 存在しない言語の場合は、en-gb へ */
                 getCurrentLang:function(){
                     let lang = this.init_lang || this.current_lang;
-                    return this.src_data[this.current_title][lang] ? lang : 'en-gb';
+                    return this.notice_data[this.current_title][lang] ? lang : 'en-gb';
                 },
+                /* ソース取得 */
                 getSrc:function(){
                     let that = this;
-                    if(Object.keys(this.src_data[this.current_title][this.current_lang]).length === 0 ){
+                    if(Object.keys(this.notice_data[this.current_title][this.current_lang]).length === 0 ){
                         request
                             .get('htmlsrc/'+this.current_title+'_'+this.current_lang+'.txt')
                             .set('Content-Type', 'text/plain;charset=utf-8')
                             .end(function(err, res){
-                                console.log(err);
-                                that.src_data[that.current_title][that.current_lang] = that.getEmbetSrc(err ? '' : res.text, that.current_title,{current_lang:that.current_lang});
+                                that.notice_data[that.current_title][that.current_lang] = that.getEmbetSrc(err ? '' : res.text, that.current_title,{current_lang:that.current_lang});
+                                that.notifyUpdatedNoticeData();
                             });
                     }
                 },
@@ -196,6 +199,11 @@
                         ret_obj.disabled = true;
                     }
                     return ret_obj;
+                },
+                /* Noticeの状態が講更新されたことを通知 */
+                notifyUpdatedNoticeData:function(){
+                    console.log('notifyIsDisabled');
+                    this.$emit('updateNoticeStatus',this.current_notice_data);
                 }
             },
             watch:{
@@ -214,7 +222,14 @@
                 lang:'en',
                 title:'hoge'
             },
-            template:'<notice :init_lang="lang" :title="title"></notice>'
+            template:'<notice :init_lang="lang" :title="title" @updateNoticeStatus="updateNoticeStatus"></notice>',
+            methods:{
+                /* Noticeの状態を更新する */
+                updateNoticeStatus:function(notice_data){
+                    // TODO:リセット＆disabled true のときはチェックできないようにする
+                    console.log('updateNoticeStatus',notice_data);
+                }
+            }
         });
     })();
 </script>
