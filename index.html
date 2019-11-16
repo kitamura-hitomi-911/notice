@@ -10,9 +10,9 @@
 <div id="tgt"></div>
 <script type="text/x-template" id="tmpl-p_notice">
     <div class="l-p_notice">
-        <div :class="'p_notice p_notice-'+current_lang">
+        <div :class="'p_notice p_notice-'+current_lang + ' p_notice-'+current_title">
             <div class="p_notice-head">
-                <h2 v-html="current_notice_data.title" class="p_notice-title"></h2>
+                <h2 v-html="current_data.title" class="p_notice-title"></h2>
                 <div class="p_notice-lang_select">
                     <select v-model="current_lang">
                         <option v-for="lang in current_lang_list" :value="lang.value">{{lang.label}}</option>
@@ -20,8 +20,8 @@
                 </div>
             </div>
             <div class="p_notice-main">
-                <div v-html="current_notice_data.content" v-if="current_notice_data.content"></div>
-                <div v-else-if="current_notice_data.disabled">取得できませんでした</div>
+                <div v-html="current_data.content" v-if="current_data.content"></div>
+                <div v-else-if="current_data.disabled">取得できませんでした</div>
                 <div class="loading" v-else>ローディングパーツいれる</div>
             </div>
         </div>
@@ -32,7 +32,7 @@
 <script>
     var request = window.superagent;
     (function(){
-        Vue.component('notice', {
+        Vue.component('p_notice', {
             props:{
                 init_lang:{
                     type:String,
@@ -90,12 +90,12 @@
                             ]
                         }
                     ],
-                    notice_data:{}
+                    data:{}
                 };
             },
             computed:{
-                current_notice_data:function(){
-                    return this.notice_data[this.current_title][this.current_lang];
+                current_data:function(){
+                    return this.data[this.current_title][this.current_lang];
                 },
                 current_lang_list:function(){
                     return this.title_data.filter(function(data){
@@ -111,33 +111,33 @@
             created:function(){
                 let that = this;
                 // src の型をセット
-                this.title_data.forEach(function(data){
-                    this.$set(this.notice_data,data.title,{});
-                    data.lang_list.forEach(function(lang){
-                        this.$set(this.notice_data[data.title], lang.value,{});
+                this.title_data.forEach(function(_data){
+                    this.$set(this.data,_data.title,{});
+                    _data.lang_list.forEach(function(lang){
+                        this.$set(this.data[_data.title], lang.value,{});
                     },this);
                 },this);
                 // 初期言語をセット
                 this.current_lang = this.getCurrentLang();
 
-                console.log(this.current_notice_data);
+                console.log(this.current_data);
             },
             template:'#tmpl-p_notice',
             methods:{
                 /* 存在しない言語の場合は、en-gb へ */
                 getCurrentLang:function(){
                     let lang = this.init_lang || this.current_lang;
-                    return this.notice_data[this.current_title][lang] ? lang : 'en-gb';
+                    return this.data[this.current_title][lang] ? lang : 'en-gb';
                 },
                 /* ソース取得 */
                 getSrc:function(){
                     let that = this;
-                    if(Object.keys(this.notice_data[this.current_title][this.current_lang]).length === 0 ){
+                    if(Object.keys(this.data[this.current_title][this.current_lang]).length === 0 ){
                         request
                             .get('htmlsrc/'+this.current_title+'_'+this.current_lang+'.txt')
                             .set('Content-Type', 'text/plain;charset=utf-8')
                             .end(function(err, res){
-                                that.notice_data[that.current_title][that.current_lang] = that.getEmbetSrc(err ? '' : res.text, that.current_title,{current_lang:that.current_lang});
+                                that.data[that.current_title][that.current_lang] = that.getEmbetSrc(err ? '' : res.text, that.current_title,{current_lang:that.current_lang});
                                 that.notifyUpdatedNoticeData();
                             });
                     }
@@ -203,7 +203,7 @@
                 /* Noticeの状態が講更新されたことを通知 */
                 notifyUpdatedNoticeData:function(){
                     console.log('notifyIsDisabled');
-                    this.$emit('updateNoticeStatus',this.current_notice_data);
+                    this.$emit('updateNoticeStatus',this.current_data);
                 }
             },
             watch:{
@@ -220,14 +220,14 @@
             el:'#tgt',
             data:{
                 lang:'en',
-                title:'hoge'
+                title:'fuga'
             },
-            template:'<notice :init_lang="lang" :title="title" @updateNoticeStatus="updateNoticeStatus"></notice>',
+            template:'<p_notice :init_lang="lang" :title="title" @updateNoticeStatus="updateNoticeStatus"></p_notice>',
             methods:{
                 /* Noticeの状態を更新する */
-                updateNoticeStatus:function(notice_data){
+                updateNoticeStatus:function(p_notice_data){
                     // TODO:リセット＆disabled true のときはチェックできないようにする
-                    console.log('updateNoticeStatus',notice_data);
+                    console.log('updateNoticeStatus',p_notice_data);
                 }
             }
         });
