@@ -186,7 +186,7 @@
                             }
                             Array.prototype.forEach.call(a_el, function (a, index) {
                                 a.href = page_url + a.getAttribute("href");
-                                console.log(a);
+                                a.setAttribute('target','_blank');
                             });
                             content_src = content_el.innerHTML;
                         }
