@@ -10,7 +10,7 @@
 <div id="tgt"></div>
 <script type="text/x-template" id="tmpl-p_notice">
     <div class="l-p_notice">
-        <div :class="'p_notice p_notice-'+current_lang + ' p_notice-'+current_title">
+        <div :class="'p_notice p_notice-'+current_lang + ' p_notice-'+current_product_name">
             <div class="p_notice-head">
                 <h2 v-html="current_data.title" class="p_notice-title"></h2>
                 <div class="p_notice-lang_select">
@@ -47,7 +47,7 @@
                     current_lang:'',
                     product_data:[
                         {
-                            title: 'hoge',
+                            name: 'hoge',
                             platforms:['a','b','c'],
                             lang_list: [
                                 {value:"ja",label:"日本語"},
@@ -72,7 +72,7 @@
                             ]
                         },
                         {
-                            title: 'fuga',
+                            name: 'fuga',
                             platforms:['d'],
                             lang_list: [
                                 {value:"ja",label:"日本語"},
@@ -97,28 +97,29 @@
             },
             computed:{
                 current_data:function(){
-                    return this.data[this.current_title][this.current_lang];
+                    return this.data[this.current_product_name][this.current_lang];
+                },
+                current_product_data:function(){
+                    // product_data 内の platforms から 現在表示すべき product を戻す
+                    let _current_product_data = this.product_data.filter(function(product){
+                        return product.platforms.indexOf(this.platform) >= 0;
+                    },this);
+                    return _current_product_data.length ? _current_product_data[0] : this.product_data[0];
                 },
                 current_lang_list:function(){
-                    return this.product_data.filter(function(data){
-                        return data.title === this.current_title;
-                    },this)[0].lang_list || [];
+                    return this.current_product_data.lang_list;
                 },
-                current_title:function(){
-                    // product_data 内の platforms から 現在表示すべき title を判別
-                    let current_title_data = this.product_data.filter(function(data){
-                        return data.platforms.indexOf(this.platform) >= 0;
-                    },this);
-                    return current_title_data.length ? current_title_data[0].title : this.product_data[0].title;
+                current_product_name:function(){
+                    return this.current_product_data.name;
                 }
             },
             created:function(){
                 let that = this;
-                // src の型をセット
-                this.product_data.forEach(function(_data){
-                    this.$set(this.data,_data.title,{});
-                    _data.lang_list.forEach(function(lang){
-                        this.$set(this.data[_data.title], lang.value,{});
+                // data にproduct.lang の階層の入れ物を用意
+                this.product_data.forEach(function(product){
+                    this.$set(this.data,product.name,{});
+                    product.lang_list.forEach(function(lang){
+                        this.$set(this.data[product.name], lang.value,{});
                     },this);
                 },this);
 
@@ -130,17 +131,17 @@
                 /* 存在しない言語の場合は、en-gb へ */
                 getCurrentLang:function(){
                     let lang = this.init_lang || this.current_lang;
-                    return this.data[this.current_title][lang] ? lang : 'en-gb';
+                    return this.data[this.current_product_name][lang] ? lang : 'en-gb';
                 },
                 /* ソース取得 */
                 getSrc:function(){
                     let that = this;
-                    if(Object.keys(this.data[this.current_title][this.current_lang]).length === 0 ){
+                    if(Object.keys(this.data[this.current_product_name][this.current_lang]).length === 0 ){
                         request
-                            .get('htmlsrc/'+this.current_title+'_'+this.current_lang+'.txt')
+                            .get('htmlsrc/'+this.current_product_name+'_'+this.current_lang+'.txt')
                             .set('Content-Type', 'text/plain;charset=utf-8')
                             .end(function(err, res){
-                                that.data[that.current_title][that.current_lang] = that.getEmbetSrc(err ? '' : res.text, that.current_title,{current_lang:that.current_lang});
+                                that.data[that.current_product_name][that.current_lang] = that.getEmbetSrc(err ? '' : res.text, that.current_product_name,{current_lang:that.current_lang});
                                 that.notifyUpdatedPNoticeData();
                             });
                     }else{
@@ -148,7 +149,7 @@
                     }
                 },
                 /* 生HTMLソースから埋め込むタイトルと内容部分を抜き出す */
-                getEmbetSrc: function(raw_html_src, title,op){
+                getEmbetSrc: function(raw_html_src, product_name,op){
                     let ret_obj = {
                         disabled:false,
                         title:'',
@@ -163,7 +164,7 @@
                     let title_els,content_els,title_el,content_el,title_src,content_src;
                     let tmp_el = document.createElement('div');
                     tmp_el.innerHTML = inner_body[1];
-                    if(title==='hoge'){
+                    if(product_name==='hoge'){
                         /* title 取得 */
                         title_els = tmp_el.getElementsByClassName('content-title');
                         title_el = title_els.length ? title_els[0] : null;
@@ -172,7 +173,7 @@
                         content_els = tmp_el.getElementsByClassName('content-main');
                         content_el = content_els.length ? content_els[0] : null;
                         content_src = content_el ? content_el.innerHTML : '';
-                    }else if(title==='fuga'){
+                    }else if(product_name==='fuga'){
                         /* title 取得 */
                         title_els = tmp_el.getElementsByTagName('section')[0].getElementsByTagName('h2');
                         title_el = title_els.length ? title_els[0] : null;
@@ -182,7 +183,7 @@
                         content_els = tmp_el.getElementsByTagName('section');
                         content_el = content_els.length ? content_els[0] : null;
                         if(content_el && title_el){
-                            let page_url = 'https://hogehoge.com/'+title+'/'+op.current_lang+'/';
+                            let page_url = 'https://hogehoge.com/'+product_name+'/'+op.current_lang+'/';
                             let own_url_el = content_el.getElementsByClassName('url');
                             let a_el = content_el.getElementsByTagName('a');
                             title_el.remove();
@@ -215,8 +216,8 @@
                 current_lang:function(){
                     this.getSrc();
                 },
-                current_title:function(){
-                    /* title が切り替わったら言語も設定しなおす */
+                current_product_name:function(){
+                    /* product_name が切り替わったら言語も設定しなおす */
                     this.current_lang = this.getCurrentLang(this.init_lang);
                     this.getSrc();
                 }
