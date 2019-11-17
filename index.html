@@ -161,10 +161,12 @@
                         ret_obj.disabled = true;
                         return ret_obj;
                     }
-                    let title_els,content_els,title_el,content_el,title_src,content_src;
                     let tmp_el = document.createElement('div');
-                    tmp_el.innerHTML = inner_body[1];
+                    let title_els,content_els,title_el,content_el,title_src,content_src;
+
                     if(product_name==='hoge'){
+                        tmp_el.innerHTML = inner_body[1].replace('画像パス','');
+
                         /* title 取得 */
                         title_els = tmp_el.getElementsByClassName('content-title');
                         title_el = title_els.length ? title_els[0] : null;
@@ -174,6 +176,8 @@
                         content_el = content_els.length ? content_els[0] : null;
                         content_src = content_el ? content_el.innerHTML : '';
                     }else if(product_name==='fuga'){
+                        tmp_el.innerHTML = inner_body[1];
+
                         /* title 取得 */
                         title_els = tmp_el.getElementsByTagName('section')[0].getElementsByTagName('h2');
                         title_el = title_els.length ? title_els[0] : null;
