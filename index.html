@@ -38,16 +38,17 @@
                     type:String,
                     required:true
                 },
-                title:{
+                platform:{
                     type:String
                 }
             },
             data:function(){
                 return {
                     current_lang:'',
-                    title_data:[
+                    product_data:[
                         {
                             title: 'hoge',
+                            platforms:['a','b','c'],
                             lang_list: [
                                 {value:"ja",label:"日本語"},
                                 {value:"en-us",label:"English(US)"},
@@ -72,6 +73,7 @@
                         },
                         {
                             title: 'fuga',
+                            platforms:['d'],
                             lang_list: [
                                 {value:"ja",label:"日本語"},
                                 {value:"en-us",label:"English(US)"},
@@ -98,30 +100,30 @@
                     return this.data[this.current_title][this.current_lang];
                 },
                 current_lang_list:function(){
-                    return this.title_data.filter(function(data){
+                    return this.product_data.filter(function(data){
                         return data.title === this.current_title;
                     },this)[0].lang_list || [];
                 },
                 current_title:function(){
-                    let current_title_data = this.title_data.filter(function(data){
-                        return data.title === this.title;
+                    // product_data 内の platforms から 現在表示すべき title を判別
+                    let current_title_data = this.product_data.filter(function(data){
+                        return data.platforms.indexOf(this.platform) >= 0;
                     },this);
-                    return current_title_data.length ? current_title_data[0].title : this.title_data[0].title;
+                    return current_title_data.length ? current_title_data[0].title : this.product_data[0].title;
                 }
             },
             created:function(){
                 let that = this;
                 // src の型をセット
-                this.title_data.forEach(function(_data){
+                this.product_data.forEach(function(_data){
                     this.$set(this.data,_data.title,{});
                     _data.lang_list.forEach(function(lang){
                         this.$set(this.data[_data.title], lang.value,{});
                     },this);
                 },this);
+
                 // 初期言語をセット
                 this.current_lang = this.getCurrentLang();
-
-                console.log(this.current_data);
             },
             template:'#tmpl-p_notice',
             methods:{
@@ -139,8 +141,10 @@
                             .set('Content-Type', 'text/plain;charset=utf-8')
                             .end(function(err, res){
                                 that.data[that.current_title][that.current_lang] = that.getEmbetSrc(err ? '' : res.text, that.current_title,{current_lang:that.current_lang});
-                                that.notifyUpdatedNoticeData();
+                                that.notifyUpdatedPNoticeData();
                             });
+                    }else{
+                        this.notifyUpdatedPNoticeData();
                     }
                 },
                 /* 生HTMLソースから埋め込むタイトルと内容部分を抜き出す */
@@ -202,8 +206,8 @@
                     return ret_obj;
                 },
                 /* Noticeの状態が講更新されたことを通知 */
-                notifyUpdatedNoticeData:function(){
-                    console.log('notifyIsDisabled');
+                notifyUpdatedPNoticeData:function(){
+                    console.log('notifyUpdatedPNoticeData',this.current_data);
                     this.$emit('updateNoticeStatus',this.current_data);
                 }
             },
@@ -212,6 +216,7 @@
                     this.getSrc();
                 },
                 current_title:function(){
+                    /* title が切り替わったら言語も設定しなおす */
                     this.current_lang = this.getCurrentLang(this.init_lang);
                     this.getSrc();
                 }
@@ -221,9 +226,9 @@
             el:'#tgt',
             data:{
                 lang:'en',
-                title:'fuga'
+                platform:'a'
             },
-            template:'<p_notice :init_lang="lang" :title="title" @updateNoticeStatus="updateNoticeStatus"></p_notice>',
+            template:'<p_notice :init_lang="lang" :platform="platform" @updateNoticeStatus="updateNoticeStatus"></p_notice>',
             methods:{
                 /* Noticeの状態を更新する */
                 updateNoticeStatus:function(p_notice_data){
